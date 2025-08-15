@@ -1,10 +1,12 @@
-
-<!DOCTYPE html><html lang="en"><head>
+<!DOCTYPE html>
+<html lang="en">
+<head>
 <script src="config.js"></script>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Hari House Rent Details</title>
 <link rel="stylesheet" href="style.css">
-</head><body>
+</head>
+<body>
 <header><h1>Hari House Rent Details</h1></header>
 <div class="container">
   <div class="card">
@@ -131,8 +133,9 @@ function toCSV(){
 }
 document.getElementById('btnExport').addEventListener('click', toCSV);
 
+let monthlyData = [];
+
 document.getElementById('btnAdd').addEventListener('click', ()=>{
-  // collect
   const get = id=>document.getElementById(id).value.trim();
   const file = document.getElementById('photo').files[0];
   const required = ['renterName','relationType','relationName','nativeAddress','familyCount','admissionDate','phone','userId','password','rentAmount','currentBill','currentBillPaidDate','boreBill'];
@@ -158,8 +161,16 @@ document.getElementById('btnAdd').addEventListener('click', ()=>{
       boreBill:get('boreBill'),
       photo:e.target.result
     };
-    members.push(row); saveMembers(members); render();
-    // clear simple fields
+
+    // ✅ Only push into monthlyData if rent status is "Paid"
+    if (row.rentStatus === "Paid") {
+      monthlyData.push(row);
+    }
+
+    members.push(row); 
+    saveMembers(members); 
+    render();
+
     document.querySelectorAll('.form-grid input:not(#admissionDate):not(#currentBillPaidDate)').forEach(el=>{ if(el.type!=='file') el.value=''; });
     document.getElementById('rentStatus').value='Paid';
     document.getElementById('admissionDate').value='';
@@ -174,14 +185,6 @@ render();
 
 <button id="submitMonthBtn">Submit for Month</button>
 <script>
-let monthlyData = [];
-
-// Example: push data when rent is marked paid
-function markRentPaid(renterData) {
-    monthlyData.push(renterData);
-    console.log("Added to monthlyData:", monthlyData);
-}
-
 document.getElementById("submitMonthBtn").addEventListener("click", function(){
     if (!GOOGLE_WEB_APP_URL) {
         alert("Google Web App URL not set in config.js");
@@ -199,7 +202,7 @@ document.getElementById("submitMonthBtn").addEventListener("click", function(){
             body: JSON.stringify(monthlyData)
         }).then(() => {
             alert("Data submitted to Google Sheets successfully!");
-            monthlyData = []; // clear after submit
+            monthlyData = [];
         }).catch(err => {
             console.error("Error sending data:", err);
             alert("Error sending data. See console for details.");
@@ -208,4 +211,5 @@ document.getElementById("submitMonthBtn").addEventListener("click", function(){
 });
 </script>
 
-</body></html>
+</body>
+</html>
