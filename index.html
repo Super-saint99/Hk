@@ -1,0 +1,173 @@
+
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>House Rent Details - Admin</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<header><h1>House Rent Details — Admin Dashboard</h1></header>
+<div class="container">
+  <div class="card">
+    <div class="center">
+      <a class="link" href="login.html" onclick="logout();return false;">Logout</a>
+    </div>
+    <h2>Add Renter</h2>
+    <div class="form-grid">
+      <input id="renterName" placeholder="Renter Name" required>
+      <select id="relationType" required>
+        <option value="">Relation</option><option>Wife</option><option>Father</option>
+      </select>
+      <input id="relationName" placeholder="Relation Name" required>
+      <input id="nativeAddress" placeholder="Native Address" required>
+      <input id="familyCount" placeholder="Family Members Count" type="number" min="0" required>
+      <input id="admissionDate" type="date" placeholder="Admission Date" required>
+      <input id="vacateDate" type="date" placeholder="Vacate Date">
+      <input id="phone" placeholder="Phone Number" required>
+      <input id="userId" placeholder="User ID (login)" required>
+      <input id="password" placeholder="Password (login)" required type="text">
+      <input id="rentAmount" type="number" placeholder="Rent Amount ₹" required>
+      <input id="paidRentDate" type="date" placeholder="Paid Rent Date" value="">
+      <select id="rentStatus"><option>Paid</option><option>Due</option></select>
+      <input id="currentBill" type="number" placeholder="Current Bill ₹" required>
+      <input id="currentBillPaidDate" type="date" placeholder="Current Bill Paid Date" required>
+      <input id="boreBill" type="number" placeholder="Bore Bill ₹" required>
+      <input id="photo" type="file" accept="image/*" required>
+    </div>
+    <div class="center" style="margin-top:10px">
+      <button id="btnAdd">Add Renter</button>
+      <button id="btnExport">Export CSV (All)</button>
+    </div>
+    <p class="notice">WhatsApp reminder text: "Please send rent by due date 6th of every month. Rent Amount: ₹xxxx".</p>
+  </div>
+
+  <div class="card table-wrap">
+    <table id="tbl">
+      <thead><tr>
+        <th>Photo</th><th>Name</th><th>Native Address</th><th>Family</th>
+        <th>Admission</th><th>Vacate</th><th>Phone</th>
+        <th>User ID</th><th>Rent ₹</th><th>Paid Rent Date</th><th>Status</th>
+        <th>Current Bill</th><th>Bill Paid Date</th><th>Bore Bill</th>
+        <th>Actions</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+<script src="common.js"></script>
+<script>
+// Gate
+const sess = getSession(); if(!sess || sess.role!=='admin'){ location.href='login.html'; }
+
+let members = loadMembers();
+function render(){
+  const tb = document.querySelector('#tbl tbody'); tb.innerHTML='';
+  members.forEach((m,i)=>{
+    const tr = document.createElement('tr');
+    const statusBadge = m.rentStatus==='Paid' ? '<span class="badge paid">Paid</span>' : '<span class="badge due">Due</span>';
+    tr.innerHTML = `
+      <td>${m.photo?'<img class="thumb" src="'+m.photo+'">':''}</td>
+      <td>${m.renterName} (${m.relationType}: ${m.relationName})</td>
+      <td>${m.nativeAddress||''}</td>
+      <td>${m.familyCount||''}</td>
+      <td>${m.admissionDate||''}</td>
+      <td>${m.vacateDate||''}</td>
+      <td>${m.phone||''}</td>
+      <td>${m.userId||''}</td>
+      <td>₹${formatINR(m.rentAmount)}</td>
+      <td>${m.paidRentDate||''}</td>
+      <td>${statusBadge}</td>
+      <td>₹${formatINR(m.currentBill)}</td>
+      <td>${m.currentBillPaidDate||''}</td>
+      <td>₹${formatINR(m.boreBill)}</td>
+      <td class="actions">
+        <button onclick="wa(${i})">WhatsApp</button>
+        <button onclick="resetPwd(${i})">Reset Password</button>
+        <button onclick="delRow(${i})">Remove</button>
+      </td>
+    `;
+    tb.appendChild(tr);
+  });
+}
+function delRow(i){ if(confirm('Remove this renter?')){ members.splice(i,1); saveMembers(members); render(); } }
+function resetPwd(i){
+  const np = prompt('Enter new password for '+(members[i].userId||members[i].renterName));
+  if(!np) return;
+  members[i].password = np;
+  saveMembers(members);
+  alert('Password updated');
+}
+function wa(i){
+  const m = members[i];
+  const phone = (m.phone||'').replace(/[^0-9]/g,'');
+  const msg = `Please send rent by due date 6th of every month. Rent Amount: ₹${m.rentAmount}.`;
+  const url = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+  window.open(url,'_blank');
+}
+function toCSV(){
+  const head = ["Photo","Renter Name","Native Address","Family","Admission","Vacate","Phone","User ID","Rent","Paid Rent Date","Status","Current Bill","Current Bill Paid Date","Bore Bill","Signature"];
+  const rows = members.map(m=>[
+    "[Photo]",
+    `${m.renterName} (${m.relationType}: ${m.relationName})`,
+    (m.nativeAddress||'').replace(/,|\n/g,' '),
+    m.familyCount||'',
+    m.admissionDate||'',
+    m.vacateDate||'',
+    m.phone||'',
+    m.userId||'',
+    m.rentAmount||'',
+    m.paidRentDate||'',
+    m.rentStatus||'',
+    m.currentBill||'',
+    m.currentBillPaidDate||'',
+    m.boreBill||'',
+    ""
+  ]);
+  const csv = [head, ...rows].map(r=>r.join(",")).join("\n");
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `house_rent_details_${todayISO()}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+}
+document.getElementById('btnExport').addEventListener('click', toCSV);
+
+document.getElementById('btnAdd').addEventListener('click', ()=>{
+  // collect
+  const get = id=>document.getElementById(id).value.trim();
+  const file = document.getElementById('photo').files[0];
+  const required = ['renterName','relationType','relationName','nativeAddress','familyCount','admissionDate','phone','userId','password','rentAmount','currentBill','currentBillPaidDate','boreBill'];
+  for(const id of required){ if(!document.getElementById(id).value){ alert('Please fill: '+id); return; } }
+  const reader = new FileReader();
+  reader.onload = e => {
+    const row = {
+      renterName:get('renterName'),
+      relationType:get('relationType'),
+      relationName:get('relationName'),
+      nativeAddress:get('nativeAddress'),
+      familyCount:get('familyCount'),
+      admissionDate:get('admissionDate'),
+      vacateDate:get('vacateDate'),
+      phone:get('phone'),
+      userId:get('userId'),
+      password:get('password'),
+      rentAmount:get('rentAmount'),
+      paidRentDate:get('paidRentDate'),
+      rentStatus:document.getElementById('rentStatus').value,
+      currentBill:get('currentBill'),
+      currentBillPaidDate:get('currentBillPaidDate'),
+      boreBill:get('boreBill'),
+      photo:e.target.result
+    };
+    members.push(row); saveMembers(members); render();
+    // clear simple fields
+    document.querySelectorAll('.form-grid input:not(#admissionDate):not(#currentBillPaidDate)').forEach(el=>{ if(el.type!=='file') el.value=''; });
+    document.getElementById('rentStatus').value='Paid';
+    document.getElementById('admissionDate').value='';
+    document.getElementById('currentBillPaidDate').value='';
+  };
+  if(!file){ alert('Please choose a photo'); return; }
+  reader.readAsDataURL(file);
+});
+
+render();
+</script>
+</body></html>

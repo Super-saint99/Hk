@@ -1,0 +1,46 @@
+
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>House Rent Details - Login</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<header><h1>House Rent Details</h1></header>
+<div class="container">
+  <div class="card">
+    <h2>Login</h2>
+    <p class="notice">Admin: <b>admin</b> / <b>1234</b>. Renters use the User ID & Password set by admin.</p>
+    <div class="form-grid">
+      <input id="uid" placeholder="User ID (admin or renter ID)">
+      <input id="pwd" placeholder="Password" type="password">
+    </div>
+    <div class="center" style="margin-top:10px">
+      <button id="btnLogin">Login</button>
+    </div>
+  </div>
+  <footer>© House Rent Details</footer>
+</div>
+<script src="common.js"></script>
+<script>
+document.getElementById('btnLogin').addEventListener('click', () => {
+  const uid = document.getElementById('uid').value.trim();
+  const pwd = document.getElementById('pwd').value;
+  if(!uid || !pwd){ alert('Enter User ID and Password'); return; }
+
+  // Admin hardcoded
+  if(uid==='admin' && pwd==='1234'){
+    setSession({role:'admin', userId:'admin'});
+    location.href='index.html';
+    return;
+  }
+  // Renter lookup
+  const members = loadMembers();
+  const m = members.find(x => (x.userId||'')===uid && (x.password||'')===pwd);
+  if(m){
+    setSession({role:'renter', userId: uid});
+    location.href='renter.html';
+  }else{
+    alert('Invalid credentials');
+  }
+});
+</script>
+</body></html>
